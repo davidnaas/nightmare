@@ -2,6 +2,8 @@
 Nightmare
 =========
 
+[![Join the chat at https://gitter.im/rosshinkley/nightmare](https://badges.gitter.im/rosshinkley/nightmare.svg)](https://gitter.im/rosshinkley/nightmare?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Nightmare is a high-level browser automation library.
 
 The goal is to expose just a few simple methods, and have an API that feels synchronous for each block of scripting, rather than deeply nested callbacks. It's designed for automating tasks across sites that don't have APIs.
@@ -10,7 +12,7 @@ Under the covers it uses [Electron](http://electron.atom.io/), which is similar 
 
 [Daydream](https://github.com/segmentio/daydream) is a complementary chrome extension built by [@stevenmiller888](https://github.com/stevenmiller888) that generates Nightmare scripts for you while you browse.
 
-Many thanks to [@matthewmueller](https://github.com/matthewmueller) for his help on Nightmare.
+Many thanks to [@matthewmueller](https://github.com/matthewmueller) and [@rosshinkley](https://github.com/rosshinkley) for their help on Nightmare.
 
 * [Examples](#examples)
 * [API](#api)
@@ -144,16 +146,46 @@ var nightmare = Nightmare({
 });
 ```
 
+##### openDevTools
+Optionally show the DevTools in the Electron window using `true`, or use an object hash containing `detatch` to show in a separate window. The hash gets passed to [`webContents.openDevTools()`](https://github.com/atom/electron/blob/master/docs/api/web-contents.md#webcontentsopendevtoolsoptions) to be handled.  This is also useful for testing purposes.  Note that this option is honored only if `show` is set to `true`.
+
+```js
+var nightmare = Nightmare({
+  openDevTools: true,
+  show: true
+});
+```
+
 #### .useragent(useragent)
 Set the `useragent` used by electron.
+
+#### .authentication(user, password)
+Set the `user` and `password` for accessing a web page using basic authentication. Be sure to set it before calling `.goto(url)`.
 
 #### .end()
 Complete any queue operations, disconnect and close the electron process.
 
 ### Interact with the Page
 
-#### .goto(url)
-Load the page at `url`.
+#### .goto(url[, headers])
+Load the page at `url`.  Optionally, a `headers` hash can be supplied to set headers on the `goto` request.
+
+When a page load is successful, `goto` returns an object with metadata about the page load, including:
+
+- `url`: The URL that was loaded
+- `code`: The HTTP status code (e.g. 200, 404, 500)
+- `method`: The HTTP method used (e.g. "GET", "POST")
+- `referrer`: The page that the window was displaying prior to this load or an empty string if this is the first page load.
+- `headers`: An object representing the response headers for the request as in `{header1-name: header1-value, header2-name: header2-value}`
+
+If the page load fails, the error will be an object wit the following properties:
+
+- `message`: A string describing the type of error
+- `code`: The underlying error code describing what went wrong. Note this is NOT the HTTP status code. For possible values, see https://code.google.com/p/chromium/codesearch#chromium/src/net/base/net_error_list.h
+- `details`: A string with additional details about the error. This may be null or an empty string.
+- `url`: The URL that failed to load
+
+Note that any valid response from a server is considered “successful.” That means things like 404 “not found” errors are successful results for `goto`. Only things that would cause no page to appear in the browser window, such as no server responding at the given address, the server hanging up in the middle of a response, or invalid URLs, are errors.
 
 #### .back()
 Go back to the previous page.
@@ -174,6 +206,8 @@ Mousedown the `selector` element once.
 Enters the `text` provided into the `selector` element.  Empty or falsey values provided for `text` will clear the selector's value.
 
 `.type()` mimics a user typing in a textbox and will emit the proper keyboard events
+
+Key presses can also be fired using Unicode values with `.type()`. For example, if you wanted to fire an enter key press, you would  write `.type('document', '\u000d')`. 
 
 > If you don't need the keyboard events, consider using `.insert()` instead as it will be faster and more robust.
 
@@ -222,6 +256,8 @@ Wait until the element `selector` is present e.g. `.wait('#pay-button')`
 #### .wait(fn[, arg1, arg2,...])
 Wait until the `fn` evaluated on the page with `arg1, arg2,...` returns `true`. All the `args` are optional. See `.evaluate()` for usage.
 
+#### .header([header, value])
+Add a header override for all HTTP requests.  If `header` is undefined, the header overrides will be reset.
 
 ### Extract from the Page
 
@@ -237,7 +273,7 @@ Capture page events with the callback. You have to call `.on()` before calling `
 ##### Additional "page" events
 
 ###### .on('page', function(type="error", message, stack))
-This event is triggered if any javscript exception is thrown on the page. But this event is not triggered if the injected javascript code (e.g. via `.evaluate()`) is throwing an exception.
+This event is triggered if any javascript exception is thrown on the page. But this event is not triggered if the injected javascript code (e.g. via `.evaluate()`) is throwing an exception.
 
 ##### "page" events
 
@@ -276,6 +312,9 @@ This event is triggered if `console.log` is used on the page. But this event is 
 
 #### .screenshot([path][, clip])
 Takes a screenshot of the current page. Useful for debugging. The output is always a `png`. Both arguments are optional. If `path` is provided, it saves the image to the disk. Otherwise it returns a `Buffer` of the image data. If `clip` is provided (as [documented here](https://github.com/atom/electron/blob/master/docs/api/browser-window.md#wincapturepagerect-callback)), the image will be clipped to the rectangle.
+
+#### .html(path, saveType)
+Save the current page as html as files to disk at the given path. Save type options are [here](https://github.com/atom/electron/blob/master/docs/api/web-contents.md#webcontentssavepagefullpath-savetype-callback).
 
 #### .pdf(path, options)
 Saves a PDF to the specified `path`. Options are [here](https://github.com/atom/electron/blob/v0.35.2/docs/api/web-contents.md#webcontentsprinttopdfoptions-callback).
@@ -350,7 +389,7 @@ yield nightmare
 
 ### Extending Nightmare
 
-#### Nightmare.action(name, action|namespace)
+#### Nightmare.action(name, [electronAction|electronNamespace], action|namespace)
 
 You can add your own custom actions to the Nightmare prototype. Here's an example:
 
@@ -392,6 +431,29 @@ var background = yield Nightmare()
   .goto('http://google.com')
   .style.background()
 ```
+
+You can also add custom Electron actions.  The additional Electron action or namespace actions take `name`, `options`, `parent`, `win`, `renderer`, and `done`.  Note the Electron action comes first, mirroring how `.evaluate()` works.  For example:
+
+```javascript
+Nightmare.action('echo',
+  function(name, options, parent, win, renderer, done) {
+    parent.on('echo', function(message) {
+      parent.emit('log', 'echo: ' + message);
+    });
+    done();
+  },
+  function(message, done) {
+    this.child.emit('echo', message);
+    done();
+    return this;
+  });
+
+yield Nightmare()
+  .goto('http://example.org')
+  .echo('hello there!');
+```
+
+...would have a `nightmare:log` showing "hello there!" when run with `DEBUG=nightmare*`.
 
 #### .use(plugin)
 
@@ -488,6 +550,8 @@ make test
   ․․․․․․․․․․․․․․․․․․
   18 passing (1m)
 ```
+
+Note that if you are using `xvfb`, `make test` will automatically run the tests under an `xvfb-run` wrapper.  If you are planning to run the tests headlessly without running `xvfb` first, set the `HEADLESS` environment variable to `0`.
 
 ## License (MIT)
 

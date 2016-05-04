@@ -1,3 +1,55 @@
+2.3.4 / 2016-04-23
+==================
+
+  * blurs text inputs when finished with `.type()` or `.input()`, including clearing selectors
+  * now errors properly for non-existent selectors when using `.type()` and `.input()`
+  * strips `sender` from Electron -> parent process forwarded events
+  * improves test speed for dev tools
+  * fixes `.then()` to comply with A+ promises
+  * pipes Electron output to `debug` prefixed with `electron:`
+  * cleans up several exception test cases using `.should.be.rejected` from `chai-as-promised`
+  * upgrades to Electron 0.37.7
+  * removes `process` event listeners when a Nightmare instance ends
+  * fixes support for `javascript:` urls
+
+2.3.3 / 2016-04-19
+==================
+
+  * fixes `.goto()` failing when the page does not load
+  * fixes deprecated Electron APIs
+  * adds testing for deprecated API usage in Electron
+
+2.3.2 / 2016-04-14
+==================
+
+  * fixes the `.wait(selector)` comment
+  * adds documentation about headers
+  * adds an interim gitter badge
+  * adds a unit test for `openDevTools`
+  * bumps to electron 0.37.5
+  * adds a wrapper to run unit tests when on CircleCI, when Xvfb is running, or the `HEADLESS` environment variable is set.  Prevents Nightmare from hanging when running headlessly.
+  * `.evaluate()` errors if a function to evaluate is not supplied
+
+2.3.1 / 2016-04-11
+==================
+
+  * fixes passing uncaught exceptions  back to the default handler after cleanup
+  * fixes overhead due to automatic subscription to frame data for screenshots
+  * Adds unicode documentation for `.type()`
+
+2.3.0 / 2016-04-02
+==================
+
+  * extends `.action()` to include adding actions on the Electron process
+  * adds a debugging message to inspect how Electron exited
+  * ensures multiple instances of Nightmare do not use the same `waitTimeout` value
+  * ensures cookies are not shared across tests
+  * adds basic HTTP authentication
+  * fixes `console.log` with injected/evaluated script
+  * ensures screenshots match the currently rendered frame
+  * adds ability to open and detach dev tools
+  * removes the double-injection from `.inject()`
+  * adds ability to save entire page as HTML
 
 2.2.0 / 2016-02-16
 ==================
